@@ -2,6 +2,7 @@
 # Settings                                                     #
 ################################################################
 
+
 # Payment Orchestration Client ID and Secret as provided by VGS
 CLIENT_ID=""
 CLIENT_SECRET=""
@@ -28,10 +29,10 @@ PAYMENT_ORCHESTRATION_API_URL="https://payments.sandbox.verygoodsecurity.app"
 ################################################################
 ################################################################
 
-echo "What is the Financial Instrument ID you want to use?"
-read FI
+echo "What is the Transfer ID you want to use?"
+read TRANS_ID
 echo ""
-echo "Financial ID: $FI"
+echo "Transfer ID: $TRANS_ID"
 echo ""
 
 # Authenticate with VGS
@@ -40,43 +41,12 @@ echo ">>> Authenticating to VGS to get access token..."
 ACCESS_RESPONSE=$(curl -s -X POST "https://auth.verygoodsecurity.com/auth/realms/vgs/protocol/openid-connect/token" \
                        -d "client_id=${CLIENT_ID}" \
                        -d "client_secret=${CLIENT_SECRET}" \
+                       -d "scope=transfers:admin" \
                        -d "grant_type=client_credentials")
 echo "Access Token:"
 echo $ACCESS_RESPONSE
 echo ""
 VGS_ACCESS_TOKEN=$(echo $ACCESS_RESPONSE | jq -r .access_token)
-
-echo ">>> Authorize credit transfer"
-PAYLOAD=$(cat <<-EOF
-{
-    "source": "${FI}", 
-    "amount": 100, 
-    "action": "capture",
-    "currency": "BRL",
-    "gateway_options": { 
-        "customer_id": "12345",
-	"dynamic_mcc": "123"
-    }
-}
-EOF
-)
-
-URL=$PAYMENT_ORCHESTRATION_API_URL"/transfers"
-echo POST: $URL
-echo "REQUEST:"
-echo $PAYLOAD | jq
-echo "RESPONSE:"
-RESPONSE=$(curl -s --location -X POST $URL \
-          -x $PROXY_URL -k \
-          -H "Authorization: Bearer ${VGS_ACCESS_TOKEN}" \
-          -H "Content-Type: application/json" \
-          --data-raw "${PAYLOAD}")
-
-echo $RESPONSE | jq -R '. as $raw | try fromjson catch $raw'
-
-TRANS_ID=$(echo $RESPONSE | jq -r .data.id)
-echo "Transfer ID:" $TRANS_ID
-echo ""
 
 echo ">>> Refunding transfer..."
 URL=$PAYMENT_ORCHESTRATION_API_URL"/transfers/${TRANS_ID}/reversals"

@@ -2,6 +2,7 @@
 # Settings                                                     #
 ################################################################
 
+
 # Payment Orchestration Client ID and Secret as provided by VGS
 CLIENT_ID=""
 CLIENT_SECRET=""
@@ -40,6 +41,7 @@ echo ">>> Authenticating to VGS to get access token..."
 ACCESS_RESPONSE=$(curl -s -X POST "https://auth.verygoodsecurity.com/auth/realms/vgs/protocol/openid-connect/token" \
                        -d "client_id=${CLIENT_ID}" \
                        -d "client_secret=${CLIENT_SECRET}" \
+                       -d "scope=transfers:write" \
                        -d "grant_type=client_credentials")
 echo "Access Token:"
 echo $ACCESS_RESPONSE
@@ -53,10 +55,7 @@ PAYLOAD=$(cat <<-EOF
     "source": "${FI}", 
     "amount": 100, 
     "action": "capture",
-    "currency": "BRL",
-    "gateway_options": {
-        "customer_id": "12345"
-    }
+    "currency": "USD"
 }
 EOF
 )
@@ -67,7 +66,6 @@ echo "REQUEST:"
 echo $PAYLOAD | jq
 echo "RESPONSE:"
 RESPONSE=$(curl -s --location -X POST $URL \
-          -x $PROXY_URL -k \
           -H "Authorization: Bearer ${VGS_ACCESS_TOKEN}" \
           -H "Content-Type: application/json" \
           --data-raw "${PAYLOAD}")
